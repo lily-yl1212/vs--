@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黄杨钿甜耳环事件全景分析</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/sigma.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.parsers.gexf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.layout.forceAtlas2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.plugins.dragNodes.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.plugins.relativeSize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/1.2.1/plugins/sigma.plugins.animate.min.js"></script>
+    <style>
+        /* 基础样式 */
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: #f4f8f4;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* 导航栏样式 */
+        .navbar {
+            width: 100%;
+            background: #a0d8a6;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            padding: 0.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .navbar .nav-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+        }
+        .navbar .nav-title {
+            font-size: 1.5rem;
+            color: #1a4522;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .navbar .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+        .navbar .nav-links a {
+            color: #1a4522;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .navbar .nav-links a:hover {
+            background: rgba(26, 69, 34, 0.1);
+        }
+        .navbar .nav-links a.active {
+            background: #2f6e4e;
+            color: white;
+        }
+
+        /* 标签页样式 */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 背景图片样式 */
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        .background-image {
+            background-image: url("https://lily-yl1212.github.io/lilyylyl/耳环照片_20250603182559.jpg");
+            background-size: cover;
+            background-position: center;
+            width: 100%;
+            height: 100%;
+            filter: grayscale(70%) blur(1.5px);
+        }
+        .overlay {
+            background-color: rgba(255, 255, 255, 0.75);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 容器样式 */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        .section {
+            margin-bottom: 2.5rem;
+            background-color: rgba(255, 255, 255, 0.97);
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 6px solid #a0d8a6;
+        }
+        .section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #1a4522;
+            border-left: 4px solid #a0d8a6;
+            padding-left: 0.7rem;
+        }
+        .visual-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        .visual-card {
+            background: #f6fbf6;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(160,216,166,0.08);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #a0d8a6;
+            display: flex;
+            flex-direction: column;
+        }
+        .visual-card h3 {
+            margin-bottom: 1.5rem;
+            color: #388e3c;
+            font-size: 1.3rem;
+            text-align: center;
+        }
+        .visual-card .chart-container {
+            flex: 1;
+            width: 100%;
+        }
+        #wordcloud-container { min-height: 400px; }
+        #emotion-pie { min-height: 450px; }
+        #bubble-chart { min-height: 600px; }
+        #sigma-container { 
+            min-height: 500px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        @media (max-width: 700px) {
+            .container { padding: 1rem 0.2rem; }
+            .navbar .nav-container { padding: 0 0.5rem; }
+            #wordcloud-container { min-height: 350px; }
+            #emotion-pie { min-height: 400px; }
+            #bubble-chart { min-height: 500px; }
+        }
+        /* 社会网络控制面板样式 */
+        .network-controls {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .degree-filter {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            background: #f6fbf6;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .degree-filter label {
+            min-width: 100px;
+            color: #1a4522;
+            font-weight: bold;
+        }
+        .degree-filter input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #a0d8a6;
+            border-radius: 3px;
+            outline: none;
+        }
+        .degree-filter input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #2f6e4e;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .degree-value {
+            min-width: 60px;
+            text-align: right;
+            font-weight: bold;
+            color: #2f6e4e;
+        }
+        .stats {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+            background: #f6fbf6;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .button-group {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .button-group button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            background: #2f6e4e;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .button-group button:hover {
+            background: #1a4522;
+        }
+        /* 添加社会网络模块的容器样式 */
+        .network-container {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+        .network-visualization {
+            flex: 1;
+            min-width: 0; /* 防止flex子项溢出 */
+        }
+        .network-image {
+            flex: 0 0 300px; /* 固定宽度300px */
+            background: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .network-image img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            display: block;
+        }
+        .network-image p {
+            margin-top: 1rem;
+            color: #666;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        /* 评论相关样式优化 */
+        .comment {
+            background: #f6fbf6;
+            padding: 1.2rem;
+            margin-bottom: 1.2rem;
+            border-radius: 8px;
+            border-left: 4px solid #a0d8a6;
+            transition: all 0.3s ease;
+        }
+        .comment:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .comment-content {
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        .comment-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        .comment-actions button {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0.5rem 0.8rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        .comment-actions button:hover {
+            background: #e8f5e9;
+            color: #2f6e4e;
+        }
+        .like-btn.active {
+            color: #2f6e4e;
+            font-weight: bold;
+        }
+        .reply-form {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f0f7f0;
+            border-radius: 6px;
+        }
+        .reply-form textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 0.8rem;
+            resize: vertical;
+            font-family: inherit;
+        }
+        .reply-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+        .reply-buttons button {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        .cancel-btn {
+            background: #f5f5f5;
+            color: #666;
+        }
+        .submit-btn {
+            background: #2f6e4e;
+            color: white;
+        }
+        .cancel-btn:hover {
+            background: #e0e0e0;
+        }
+        .submit-btn:hover {
+            background: #1a4522;
+        }
+        .reply {
+            margin: 1rem 0 1rem 2rem;
+            padding: 1rem;
+            background: #f0f7f0;
+            border-radius: 6px;
+            border-left: 3px solid #a0d8a6;
+        }
+        .reply-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .reply-content {
+            color: #333;
+            line-height: 1.5;
+        }
+        .comment-form {
+            margin-top: 2rem;
+            background: #f6fbf6;
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+        .comment-form textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            resize: vertical;
+            font-family: inherit;
+        }
+        .comment-form button {
+            background: #2f6e4e;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        .comment-form button:hover {
+            background: #1a4522;
+        }
+        /* 添加时间线样式 */
+        .timeline-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: #2f6e4e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .timeline-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 380px;
+            height: 100%;
+            background: white;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            transition: right 0.3s ease;
+            z-index: 1001;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .timeline-panel.active {
+            right: 0;
+        }
+        .timeline-title {
+            color: #1a4522;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #a0d8a6;
+        }
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #a0d8a6;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -34px;
+            top: 0;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #2f6e4e;
+            border: 2px solid #a0d8a6;
+        }
+        .timeline-date {
+            font-weight: bold;
+            color: #2f6e4e;
+            margin-bottom: 5px;
+        }
+        .timeline-content {
+            background: #f6fbf6;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid #a0d8a6;
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-container">
+        <div class="background-image" style="background-image: url('https://lily-yl1212.github.io/lilyylyl/耳环照片_20250603182559.jpg');"></div>
+        <div class="overlay"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <span class="nav-title">黄杨钿甜耳环事件全景分析</span>
+            <div class="nav-links">
+                <a href="#" class="active" onclick="switchTab('overview')">事件舆情概况</a>
+                <a href="#" onclick="switchTab('visualization')">数据可视化分析</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 事件舆情概况标签页 -->
+    <div id="overview" class="tab-content active">
+        <div class="container">
+            <!-- 事件舆情概况部分 -->
+            <section class="section">
+                <h2>事件舆情概况</h2>
+                <div class="content-section">
+                    <h2>一、事件核心争议点</h2>
+                    <h3>1. 耳环真伪与财富来源</h3>
+                    <p>黄杨钿甜在视频中称耳环为母亲所有，后被其父杨伟解释为仿品，但公众质疑若为仿品，为何品牌方未追责且其家庭频繁展示奢侈品。网友发现其母曾佩戴价值50万元的梵克雅宝项链，父亲名下关联多家公司，涉及会展、生物科技等领域，注册时间与雅安灾后重建、疫情等敏感节点重合。</p>
+                    <h3>2. 家庭背景与公职关联</h3>
+                    <p>杨伟曾任雅安市公务员，2017年辞职后经商，被指涉嫌违规经商。其任职期间与家族企业存续时间高度吻合，例如2015年其配偶注册的会展公司曾参与雅安展会招投标，中标方为深圳关联企业。官方通报确认杨伟未参与雅安灾后重建项目，但其在雅安工作期间违规经商、隐瞒二胎生育等问题被立案调查，公众认为调查未触及财富根源。</p>
+                    <h3>3. 艺考成绩与教育资源公平</h3>
+                    <p>黄杨钿甜以中戏第二名、北电第六名等成绩通过艺考，但网友指出其高中毕业典礼演唱视频中表现欠佳，质疑成绩真实性，认为其资源或与家庭背景有关。</p>
+                </div>
+
+                <div class="content-section">
+                    <h2>二、公众质疑与舆论发酵</h2>
+                    <h3>1. 反腐与公信力追问</h3>
+                    <p>公众并非单纯针对耳环价值，而是质疑特权阶层通过公权力牟利。事件被类比为"曲婉婷2.0"，焦点从娱乐八卦上升至对公职人员廉洁性、慈善资金透明度的监督。</p>
+                    <h3>2. 企业变更与避嫌操作</h3>
+                    <p>争议爆发后，杨伟关联公司迅速变更法人、地址等信息，其母司玲霞曾涉及非法签证诉讼案件，进一步加深公众怀疑。</p>
+                    <h3>3. 媒体与官方角色</h3>
+                    <p>部分媒体持续追问事件核心问题，呼吁跨部门联合调查。雅安官方通报后，舆论认为回应避重就轻，未解决"巨额财富积累与公务员薪资不匹配"的实质问题。</p>
+                </div>
+
+                <div class="content-section">
+                    <h2>三、社会影响与反思</h2>
+                    <h3>1. 公众情绪与监督机制</h3>
+                    <p>事件反映公众对"特权腐败"的集体焦虑，舆论通过自发调查形成倒逼效应，要求权力运行透明化。网友强调"仇腐不仇富"，呼吁制度性防范公职人员权力寻租。</p>
+                    <h3>2. 艺人与公共形象</h3>
+                    <p>黄杨钿甜因争议导致公众形象受损，其主演的电视剧《冰湖重生》播出前景不明，制片方虽表态支持，但舆论压力可能影响作品市场接受度。</p>
+                    <h3>3. 教育公平与资源分配</h3>
+                    <p>艺考成绩争议触及教育公平议题，部分声音认为艺术类考试应加强透明度，避免"资源咖"挤压普通考生机会。</p>
+                </div>
+
+                <div class="content-section">
+                    <h2>四、事件进展与待解疑问</h2>
+                    <p>截至2025年6月3日，官方调查仍聚焦杨伟在雅安任职期间的违规问题，尚未公布家庭资产审查结果。公众期待的关键问题包括：</p>
+                    <ul>
+                        <li>耳环真实价值及购买资金来源；</li>
+                        <li>家族企业是否利用公职影响力获取利益；</li>
+                        <li>艺考录取过程中是否存在违规操作。</li>
+                    </ul>
+                    <p>该事件已成为公众监督权力运行的标志性案例，其后续进展或影响舆论对公职人员廉洁性审查的长期关注。</p>
+                </div>
+            </section>
+
+            <!-- 评论部分 -->
+            <section class="section comments-section">
+                <h2>公众评论</h2>
+                <div id="comments-container">
+                    <!-- 评论将通过JavaScript动态添加 -->
+                </div>
+                <div class="comment-form">
+                    <textarea id="overview-new-comment" placeholder="写下你的评论..."></textarea>
+                    <button onclick="submitComment('overview')">发表评论</button>
+                </div>
+            </section>
+
+            <!-- 时间线按钮 -->
+            <button class="timeline-btn" id="timelineBtn">
+                <i class="fa-solid fa-calendar-alt"></i> 事件时间线
+            </button>
+
+            <!-- 时间线面板 -->
+            <aside class="timeline-panel" id="timelinePanel">
+                <button class="close-btn" id="closeBtn"><i class="fas fa-times"></i></button>
+                <h2 class="timeline-title">事件时间线梳理</h2>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月15日</div>
+                        <div class="timeline-content">
+                            <p>黄杨钿甜在社交媒体发布视频，展示佩戴的耳环，引发网友关注。</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月16日</div>
+                        <div class="timeline-content">
+                            <p>网友发现耳环疑似某奢侈品牌，价值不菲，引发对黄杨钿甜家庭背景的讨论。</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月17日</div>
+                        <div class="timeline-content">
+                            <p>杨伟回应称耳环为仿品，但网友发现其家庭频繁展示奢侈品，质疑财富来源。</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月18日</div>
+                        <div class="timeline-content">
+                            <p>网友爆料杨伟曾任雅安市公务员，其家族企业注册时间与雅安灾后重建时间重合。</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月19日</div>
+                        <div class="timeline-content">
+                            <p>雅安市官方通报，确认杨伟未参与灾后重建项目，但存在违规经商等问题。</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月20日</div>
+                        <div class="timeline-content">
+                            <p>事件持续发酵，相关话题阅读量超过10亿，讨论量超过100万。</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月21日</div>
+                        <div class="timeline-content">
+                            <p>杨伟关联公司开始变更法人、地址等信息，引发更多质疑。</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月22日</div>
+                        <div class="timeline-content">
+                            <p>黄杨钿甜艺考成绩引发争议，网友质疑其获得优质教育资源的公平性。</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月23日</div>
+                        <div class="timeline-content">
+                            <p>官方宣布对杨伟在雅安任职期间的违规问题立案调查。</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">2025年5月24日</div>
+                        <div class="timeline-content">
+                            <p>事件引发对公职人员廉洁性、教育公平等议题的广泛讨论。</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- 数据可视化分析标签页 -->
+    <div id="visualization" class="tab-content">
+        <div class="container">
+            <section class="section">
+                <h2>数据可视化分析</h2>
+                <div class="visual-grid">
+                    <!-- 词云图 -->
+                    <div class="visual-card">
+                        <h3>高频词云分析</h3>
+                        <div id="wordcloud-container" class="chart-container"></div>
+                    </div>
+                    <!-- 情感饼图 -->
+                    <div class="visual-card">
+                        <h3>情感倾向分析</h3>
+                        <div id="emotion-pie" class="chart-container"></div>
+                    </div>
+                    <!-- 主题气泡图 -->
+                    <div class="visual-card">
+                        <h3>主题关联分析</h3>
+                        <div id="bubble-chart" class="chart-container"></div>
+                    </div>
+                    <!-- 社会网络可视化 -->
+                    <div class="visual-card">
+                        <h3>社会网络分析</h3>
+                        <div class="network-container">
+                            <div class="network-visualization">
+                                <div class="network-controls">
+                                    <div class="degree-filter">
+                                        <label>最小度：</label>
+                                        <input type="range" id="minDegree" min="0" max="3000" value="200" step="1">
+                                        <span class="degree-value" id="minDegreeValue">200</span>
+                                    </div>
+                                    <div class="degree-filter">
+                                        <label>最大度：</label>
+                                        <input type="range" id="maxDegree" min="0" max="3000" value="3000" step="1">
+                                        <span class="degree-value" id="maxDegreeValue">3000</span>
+                                    </div>
+                                    <div class="stats">
+                                        显示节点数：<span id="visibleNodes">0</span> / <span id="totalNodes">0</span>
+                                    </div>
+                                    <div class="button-group">
+                                        <button onclick="resetZoom()">重置视图</button>
+                                        <button onclick="toggleLabels()">显示/隐藏标签</button>
+                                    </div>
+                                </div>
+                                <div id="sigma-container" class="chart-container"></div>
+                            </div>
+                            <div class="network-image">
+                                <img src="https://lily-yl1212.github.io/lilyylyl/1耳环.png" alt="耳环图片">
+                                <p>事件核心物品：黄杨钿甜佩戴的耳环</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // 标签页切换功能
+        function switchTab(tabId) {
+            // 更新导航链接状态
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // 更新标签页显示状态
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+
+            // 如果切换到可视化标签页，重新调整图表大小
+            if (tabId === 'visualization') {
+                setTimeout(() => {
+                    if (typeof wordcloudChart !== 'undefined') wordcloudChart.resize();
+                    if (typeof emotionPie !== 'undefined') emotionPie.resize();
+                    if (typeof bubbleChart !== 'undefined') bubbleChart.resize();
+                    if (typeof sigmaInstance !== 'undefined') sigmaInstance.refresh();
+                }, 100);
+            }
+        }
+
+        // 词云图脚本
+        const wordcloudColors = [
+            '#A0D8A6','#E07563','#F1BBC9','#B7553C','#6090B8','#F3DC3','#77431E','#41BBCB'
+        ];
+        const words = [
+            { name: '黄杨钿甜', value: 230 }, { name: '耳环', value: 200 }, { name: '超话', value: 180 },
+            { name: '视频', value: 170 }, { name: '事件', value: 160 }, { name: '知道', value: 150 },
+            { name: '网友', value: 140 }, { name: '钱', value: 130 }, { name: '问题', value: 120 },
+            { name: '调查', value: 110 }, { name: '父亲', value: 100 }, { name: '雅安', value: 90 },
+            { name: '喜欢', value: 80 }, { name: '万', value: 70 }, { name: '爸爸', value: 60 },
+            { name: '妈妈', value: 50 }, { name: '公司', value: 40 }, { name: '黄杨', value: 30 },
+            { name: '回应', value: 20 }, { name: '严查', value: 10 }, { name: '魔女', value: 9 },
+            { name: '热度', value: 8 }, { name: '蹭', value: 7 }, { name: '成人礼', value: 6 },
+            { name: '捐款', value: 5 }, { name: '天价', value: 4 }, { name: '觉得', value: 3 },
+            { name: '假', value: 2 }, { name: '引发', value: 1 }, { name: '清楚', value: 1 },
+            { name: '佩戴', value: 1 }, { name: '社会', value: 1 }, { name: '公众', value: 1 },
+            { name: '公务员', value: 1 }, { name: '买', value: 1 }, { name: '质疑', value: 1 },
+            { name: '关注', value: 1 }, { name: '争议', value: 1 }, { name: '娱乐圈', value: 1 },
+            { name: '戴', value: 1 }, { name: '通报', value: 1 }, { name: '家', value: 1 },
+            { name: '相关', value: 1 }, { name: '情况', value: 1 }, { name: '家庭', value: 1 },
+            { name: '捐', value: 1 }, { name: '彻查', value: 1 }, { name: '品牌', value: 1 },
+            { name: '媒体', value: 1 }, { name: '甜甜', value: 1 }, { name: '炫富', value: 1 },
+            { name: '粉丝', value: 1 }, { name: '明星', value: 1 }, { name: '珠宝', value: 1 },
+            { name: '演员', value: 1 }, { name: '官方', value: 1 }, { name: '经商', value: 1 },
+            { name: '甜', value: 1 }, { name: '里', value: 1 }, { name: '杨伟', value: 1 },
+            { name: '扒', value: 1 }, { name: '妈', value: 1 }, { name: 'hytt', value: 1 },
+            { name: '工作', value: 1 }, { name: '真相', value: 1 }, { name: '立案', value: 1 },
+            { name: '照片', value: 1 }, { name: '虞书欣', value: 1 }, { name: '爸', value: 1 },
+            { name: '人民', value: 1 }, { name: '感觉', value: 1 }, { name: '230w', value: 1 },
+            { name: '财富', value: 1 }, { name: '公职人员', value: 1 }, { name: '普通', value: 1 },
+            { name: '来源', value: 1 }, { name: '高考', value: 1 }, { name: '查查', value: 1 },
+            { name: '清白', value: 1 }, { name: '新闻', value: 1 }, { name: '期间', value: 1 },
+            { name: '中国', value: 1 }, { name: '内容', value: 1 }, { name: '支持', value: 1 },
+            { name: '发现', value: 1 }, { name: '父母', value: 1 }, { name: '万元', value: 1 },
+            { name: '背景', value: 1 }, { name: '女儿', value: 1 }, { name: '挖', value: 1 },
+            { name: '舆论', value: 1 }, { name: '首饰', value: 1 }, { name: '其父', value: 1 },
+            { name: '地震', value: 1 }, { name: '出', value: 1 }, { name: '雅安市', value: 1 },
+            { name: '一点', value: 1 }, { name: '22', value: 1 }, { name: '仇富', value: 1 },
+            { name: '杨某', value: 1 }, { name: '违规', value: 1 }, { name: '正品', value: 1 },
+            { name: '时间', value: 1 }, { name: '贪', value: 1 }, { name: '背后', value: 1 },
+            { name: '评论', value: 1 }, { name: '部门', value: 1 }, { name: '价值', value: 1 },
+            { name: '四川', value: 1 }, { name: '公关', value: 1 }, { name: '奶奶', value: 1 },
+            { name: '重建', value: 1 }, { name: '自证', value: 1 }, { name: '超', value: 1 },
+            { name: '厉害', value: 1 }, { name: '当年', value: 1 }, { name: '小女孩', value: 1 },
+            { name: '没想到', value: 1 }, { name: '澄清', value: 1 }, { name: '贪污', value: 1 },
+            { name: '风波', value: 1 }, { name: '后续', value: 1 }, { name: '监督', value: 1 },
+            { name: '原来', value: 1 }, { name: '发布', value: 1 }, { name: '最后', value: 1 },
+            { name: '有钱', value: 1 }, { name: '噢', value: 1 }, { name: '相信', value: 1 },
+            { name: '亿', value: 1 }, { name: '找', value: 1 }, { name: '证据', value: 1 },
+            { name: '甜甜的', value: 1 }, { name: '暴雨', value: 1 }, { name: '正常', value: 1 },
+            { name: '起来', value: 1 }, { name: '孩子', value: 1 }, { name: '直接', value: 1 },
+            { name: '八卦', value: 1 }, { name: '爷爷', value: 1 }, { name: '是否', value: 1 },
+            { name: '造谣', value: 1 }, { name: '公职', value: 1 }, { name: '越', value: 1 },
+            { name: '网络', value: 1 }
+        ];
+        const wordcloudChart = echarts.init(document.getElementById('wordcloud-container'));
+        wordcloudChart.setOption({
+            backgroundColor: '#ffffff',
+            tooltip: { show: true, formatter: p => p.name },
+            series: [{
+                type: 'wordCloud',
+                shape: 'cardioid',
+                left: 'center',
+                top: 'center',
+                width: '95%', // 增加宽度占比
+                height: '95%', // 增加高度占比
+                sizeRange: [14, 70], // 增加字体大小范围
+                rotationRange: [-45, 45],
+                rotationStep: 5,
+                gridSize: 10, // 增加网格大小
+                drawOutOfBound: false,
+                textStyle: {
+                    fontFamily: '宋体',
+                    fontWeight: 'bold',
+                    color: function () {
+                        return wordcloudColors[Math.floor(Math.random() * wordcloudColors.length)];
+                    }
+                },
+                emphasis: {
+                    textStyle: {
+                        shadowBlur: 10,
+                        shadowColor: '#333',
+                        fontSize: 24 // 增加悬停时的字体大小
+                    }
+                },
+                data: words
+            }]
+        });
+        window.addEventListener('resize', function() { wordcloudChart.resize(); });
+
+        // 情感饼图脚本
+        const emotionPie = echarts.init(document.getElementById('emotion-pie'));
+        emotionPie.setOption({
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b} : {c}% ({d}%)'
+            },
+            legend: {
+                top: '5%',
+                left: 'center'
+            },
+            series: [
+                {
+                    name: '情感占比',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: {
+                        borderRadius: 10,
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    },
+                    label: {
+                        show: true,
+                        position: 'inside',
+                        formatter: '{d}%'
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 20,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    labelLine: { show: false },
+                    data: [
+                        { value: 51.7625, name: '积极' },
+                        { value: 17.0760, name: '中性' },
+                        { value: 31.1615, name: '消极' }
+                    ]
+                }
+            ]
+        });
+        window.addEventListener('resize', function() { emotionPie.resize(); });
+
+        // 主题气泡图脚本
+        const bubbleChart = echarts.init(document.getElementById('bubble-chart'));
+        const bubbleData = [
+            {
+                name: '事件核心',
+                value: 100,
+                symbolSize: 85,
+                itemStyle: { color: '#A0D8A6' },
+                x: 0,  // 设置中心节点位置
+                y: 0,
+                children: [
+                    { name: '耳环真伪', value: 85, symbolSize: 65, x: -150, y: -150 },
+                    { name: '黄杨钿甜', value: 75, symbolSize: 60, x: 150, y: -150 },
+                    { name: '视频内容', value: 65, symbolSize: 55, x: -150, y: 150 },
+                    { name: '品牌价值', value: 60, symbolSize: 50, x: 150, y: 150 }
+                ]
+            },
+            {
+                name: '社会关注',
+                value: 95,
+                symbolSize: 80,
+                itemStyle: { color: '#E07563' },
+                x: 400,  // 设置中心节点位置
+                y: 0,
+                children: [
+                    { name: '网友质疑', value: 80, symbolSize: 60, x: 250, y: -150 },
+                    { name: '舆论发酵', value: 70, symbolSize: 55, x: 550, y: -150 },
+                    { name: '媒体关注', value: 65, symbolSize: 50, x: 250, y: 150 },
+                    { name: '公众监督', value: 60, symbolSize: 45, x: 550, y: 150 }
+                ]
+            },
+            {
+                name: '事件影响',
+                value: 90,
+                symbolSize: 75,
+                itemStyle: { color: '#F1BBC9' },
+                x: 0,  // 设置中心节点位置
+                y: 400,
+                children: [
+                    { name: '官方调查', value: 75, symbolSize: 55, x: -150, y: 250 },
+                    { name: '家庭背景', value: 70, symbolSize: 50, x: 150, y: 250 },
+                    { name: '公职关联', value: 65, symbolSize: 45, x: -150, y: 550 },
+                    { name: '企业变更', value: 60, symbolSize: 40, x: 150, y: 550 }
+                ]
+            },
+            {
+                name: '舆论焦点',
+                value: 85,
+                symbolSize: 70,
+                itemStyle: { color: '#B7553C' },
+                x: 400,  // 设置中心节点位置
+                y: 400,
+                children: [
+                    { name: '财富来源', value: 70, symbolSize: 50, x: 250, y: 250 },
+                    { name: '艺考成绩', value: 65, symbolSize: 45, x: 550, y: 250 },
+                    { name: '教育公平', value: 60, symbolSize: 40, x: 250, y: 550 },
+                    { name: '公信力', value: 55, symbolSize: 35, x: 550, y: 550 }
+                ]
+            }
+        ];
+
+        bubbleChart.setOption({
+            tooltip: {
+                trigger: 'item',
+                formatter: '{b}: {c}'
+            },
+            series: [{
+                type: 'graph',
+                layout: 'none',  // 使用固定布局
+                data: bubbleData.flatMap(group => [
+                    group,  // 中心节点
+                    ...group.children.map(child => ({
+                        ...child,
+                        itemStyle: { color: group.itemStyle.color }
+                    }))
+                ]),
+                categories: [
+                    { name: '事件核心' },
+                    { name: '社会关注' },
+                    { name: '事件影响' },
+                    { name: '舆论焦点' }
+                ],
+                roam: true,
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: '{b}',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    backgroundColor: 'rgba(255,255,255,0.7)',
+                    padding: [4, 8],
+                    borderRadius: 4
+                },
+                edges: bubbleData.flatMap(group =>
+                    group.children.map(child => ({
+                        source: group.name,
+                        target: child.name,
+                        lineStyle: {
+                            color: group.itemStyle.color,
+                            width: 2,
+                            curveness: 0.3,
+                            opacity: 0.6
+                        }
+                    }))
+                ),
+                emphasis: {
+                    focus: 'adjacency',
+                    label: {
+                        fontSize: 16,
+                        backgroundColor: 'rgba(255,255,255,0.9)'
+                    },
+                    edgeStyle: {
+                        width: 3,
+                        opacity: 0.8
+                    }
+                }
+            }]
+        });
+
+        // 添加自动布局调整
+        let layoutTimer = null;
+        bubbleChart.on('finished', function() {
+            if (layoutTimer) {
+                clearTimeout(layoutTimer);
+            }
+            layoutTimer = setTimeout(() => {
+                const option = bubbleChart.getOption();
+                const series = option.series[0];
+                const nodes = series.data;
+                
+                // 计算每个主题组的中心位置
+                const groupCenters = {};
+                bubbleData.forEach(group => {
+                    const groupNodes = nodes.filter(node => 
+                        node.name === group.name || 
+                        group.children.some(child => child.name === node.name)
+                    );
+                    const centerX = groupNodes.reduce((sum, node) => sum + (node.x || 0), 0) / groupNodes.length;
+                    const centerY = groupNodes.reduce((sum, node) => sum + (node.y || 0), 0) / groupNodes.length;
+                    groupCenters[group.name] = { x: centerX, y: centerY };
+                });
+                
+                // 调整节点位置
+                nodes.forEach(node => {
+                    const group = bubbleData.find(g => 
+                        g.name === node.name || 
+                        g.children.some(child => child.name === node.name)
+                    );
+                    if (group) {
+                        const center = groupCenters[group.name];
+                        if (node.name === group.name) {
+                            // 中心节点保持在组中心
+                            node.x = center.x;
+                            node.y = center.y;
+                        } else {
+                            // 子节点围绕中心节点分布
+                            const angle = Math.random() * Math.PI * 2;
+                            const distance = 150 + Math.random() * 50;
+                            node.x = center.x + Math.cos(angle) * distance;
+                            node.y = center.y + Math.sin(angle) * distance;
+                        }
+                    }
+                });
+                
+                bubbleChart.setOption(option);
+            }, 1000);
+        });
+
+        window.addEventListener('resize', function() { bubbleChart.resize(); });
+
+        // 社会网络可视化脚本
+        let maxDegree = 0;
+        let nodeDegrees = new Map();
+        let labelsVisible = true;
+
+        // 使用柔和的颜色序列
+        const colors = [
+            '#91c788',  // 柔和的绿色
+            '#ccd5ae',  // 淡黄绿色
+            '#e9edc9',  // 淡黄色
+            '#fefae0',  // 米色
+            '#d4a373',  // 淡棕色
+            '#bc6c25',  // 深棕色
+            '#a98467'   // 灰棕色
+        ];
+
+        function initSigma() {
+            console.log('初始化Sigma实例...');
+            sigmaInstance = new sigma({
+                container: 'sigma-container',
+                settings: {
+                    defaultNodeColor: '#91c788',  // 更柔和的绿色
+                    defaultEdgeColor: '#91c788',  // 更柔和的绿色
+                    labelThreshold: 6,
+                    defaultLabelSize: 12,
+                    minNodeSize: 2,
+                    maxNodeSize: 15,
+                    minEdgeSize: 1.5,    // 稍微减小边宽
+                    maxEdgeSize: 3,      // 稍微减小边宽
+                    sideMargin: 0.5,
+                    drawLabels: true,
+                    labelSize: 'proportional',
+                    labelSizeRatio: 1.5,
+                    renderer: {
+                        type: 'canvas'
+                    }
+                }
+            });
+
+            // 加载GEXF数据
+            console.log('开始加载GEXF数据...');
+            sigma.parsers.gexf(
+                '耳环社会网络1.gexf',
+                sigmaInstance,
+                function(s) {
+                    console.log('GEXF数据加载成功');
+                    
+                    // 计算节点度数并存储
+                    s.graph.nodes().forEach(node => {
+                        const degree = s.graph.degree(node.id);
+                        nodeDegrees.set(node.id, degree);
+                        maxDegree = Math.max(maxDegree, degree);
+                        // 设置节点大小与度数相关
+                        node.size = 2 + (degree / maxDegree) * 13;
+                        node.labelSize = 10 + (degree / maxDegree) * 6;
+                        node.color = '#91c788';  // 使用柔和的绿色
+                    });
+
+                    // 设置边的颜色和宽度
+                    s.graph.edges().forEach((edge, index) => {
+                        edge.color = colors[index % colors.length];
+                        edge.size = 1.5;  // 固定边宽
+                    });
+
+                    // 初始化度范围滑块
+                    const minDegreeInput = document.getElementById('minDegree');
+                    const maxDegreeInput = document.getElementById('maxDegree');
+                    if (minDegreeInput && maxDegreeInput) {
+                        minDegreeInput.max = maxDegree;
+                        maxDegreeInput.max = maxDegree;
+                        minDegreeInput.value = 0;
+                        maxDegreeInput.value = maxDegree;
+                        document.getElementById('minDegreeValue').textContent = '0';
+                        document.getElementById('maxDegreeValue').textContent = maxDegree;
+                        document.getElementById('totalNodes').textContent = s.graph.nodes().length;
+                    }
+
+                    // 应用初始节点可见性
+                    updateNodeVisibility();
+
+                    // 配置力导向布局
+                    sigma.layouts.forceAtlas2.configure(s, {
+                        worker: false,
+                        autoStop: true,
+                        background: true,
+                        scaleRatio: 0.8,
+                        gravity: 0.5,
+                        slowDown: 2,
+                        barnesHutOptimize: true,
+                        strongGravityMode: true,
+                        adjustSizes: true,
+                        edgeWeightInfluence: 0.2
+                    });
+
+                    // 启动力导向布局
+                    sigma.layouts.forceAtlas2.start(s);
+
+                    // 绑定事件
+                    console.log('绑定Sigma事件...');
+
+                    // 节点点击事件
+                    s.bind('clickNode', function(e) {
+                        const node = e.data.node;
+                        const degree = nodeDegrees.get(node.id) || 0;
+                        const nodeInfo = document.getElementById('node-info');
+                        nodeInfo.innerHTML = `
+                            <h3>${node.label}</h3>
+                            <p>度数: ${degree}</p>
+                            <p>关联节点数: ${s.graph.degree(node.id)}</p>
+                        `;
+                        nodeInfo.style.display = 'block';
+                    });
+
+                    // 点击空白处隐藏节点信息
+                    s.bind('clickStage', function() {
+                        document.getElementById('node-info').style.display = 'none';
+                    });
+
+                    // 节点悬停事件
+                    s.bind('overNode', function(e) {
+                        const node = e.data.node;
+                        node.color = '#bc6c25';  // 鼠标悬停时使用深棕色
+                        s.graph.edges().forEach(edge => {
+                            if (edge.source === node.id || edge.target === node.id) {
+                                edge.color = '#bc6c25';  // 鼠标悬停时使用深棕色
+                                edge.size = 2;
+                            }
+                        });
+                        s.refresh();
+                    });
+
+                    // 节点离开事件
+                    s.bind('outNode', function(e) {
+                        const node = e.data.node;
+                        node.color = '#91c788';  // 恢复为柔和的绿色
+                        s.graph.edges().forEach((edge, index) => {
+                            edge.color = colors[index % colors.length];
+                            edge.size = 1.5;
+                        });
+                        s.refresh();
+                    });
+
+                    // 强制刷新一次
+                    setTimeout(() => {
+                        s.refresh();
+                        console.log('强制刷新完成');
+                    }, 1000);
+
+                    console.log('Sigma实例初始化完成');
+                }
+            );
+        }
+
+        function updateNodeVisibility() {
+            if (!sigmaInstance) {
+                console.error('Sigma实例未初始化');
+                return;
+            }
+
+            const minDegree = parseInt(document.getElementById('minDegree').value) || 0;
+            const maxDegree = parseInt(document.getElementById('maxDegree').value) || maxDegree;
+            let visibleCount = 0;
+
+            sigmaInstance.graph.nodes().forEach(node => {
+                const degree = nodeDegrees.get(node.id) || 0;
+                const visible = degree >= minDegree && degree <= maxDegree;
+                node.hidden = !visible;
+                if (visible) visibleCount++;
+            });
+
+            document.getElementById('visibleNodes').textContent = visibleCount;
+            sigmaInstance.refresh();
+        }
+
+        function resetZoom() {
+            if (sigmaInstance) {
+                sigmaInstance.camera.goTo({
+                    x: 0,
+                    y: 0,
+                    ratio: 1
+                });
+            }
+        }
+
+        function toggleLabels() {
+            if (!sigmaInstance) return;
+            labelsVisible = !labelsVisible;
+            sigmaInstance.settings('drawLabels', labelsVisible);
+            sigmaInstance.refresh();
+        }
+
+        // 初始化度范围筛选器
+        function initDegreeFilters() {
+            const minDegreeInput = document.getElementById('minDegree');
+            const maxDegreeInput = document.getElementById('maxDegree');
+
+            if (minDegreeInput && maxDegreeInput) {
+                minDegreeInput.addEventListener('input', function(e) {
+                    document.getElementById('minDegreeValue').textContent = e.target.value;
+                    updateNodeVisibility();
+                });
+
+                maxDegreeInput.addEventListener('input', function(e) {
+                    document.getElementById('maxDegreeValue').textContent = e.target.value;
+                    updateNodeVisibility();
+                });
+
+                document.querySelector('.button-group').addEventListener('click', function(e) {
+                    if (e.target.matches('button')) {
+                        if (e.target.textContent.includes('重置视图')) {
+                            resetZoom();
+                        } else if (e.target.textContent.includes('显示/隐藏标签')) {
+                            toggleLabels();
+                        }
+                    }
+                });
+            }
+        }
+
+        // 添加错误处理
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('错误：', msg, 'at', url, ':', lineNo, ':', columnNo);
+            console.error('错误详情：', error);
+            return false;
+        };
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，初始化可视化组件');
+            initSigma();
+            setTimeout(initDegreeFilters, 1000);
+
+            // 窗口大小改变时调整视图
+            window.addEventListener('resize', function() {
+                if (sigmaInstance) {
+                    sigmaInstance.refresh();
+                }
+            });
+        });
+
+        // 评论系统相关代码
+        const comments = new Map(); // 存储所有评论数据
+        let commentId = 1; // 评论ID计数器
+        const likedComments = new Set(); // 存储已点赞的评论ID
+
+        // 初始化评论系统
+        function initComments() {
+            // 从localStorage加载评论数据
+            const savedComments = localStorage.getItem('comments');
+            const savedLikedComments = localStorage.getItem('likedComments');
+            
+            if (savedComments) {
+                const parsedComments = JSON.parse(savedComments);
+                parsedComments.forEach(comment => {
+                    comments.set(comment.id, comment);
+                    commentId = Math.max(commentId, parseInt(comment.id.split('-')[1]) + 1);
+                });
+            }
+            
+            if (savedLikedComments) {
+                const parsedLikedComments = JSON.parse(savedLikedComments);
+                parsedLikedComments.forEach(id => likedComments.add(id));
+            }
+            
+            // 渲染评论
+            renderComments();
+        }
+
+        // 渲染评论列表
+        function renderComments() {
+            const container = document.getElementById('comments-container');
+            container.innerHTML = '';
+            
+            comments.forEach(comment => {
+                const commentElement = createCommentElement(comment);
+                container.appendChild(commentElement);
+            });
+        }
+
+        // 创建评论元素
+        function createCommentElement(comment) {
+            const div = document.createElement('div');
+            div.className = 'comment';
+            div.setAttribute('data-id', comment.id);
+            
+            const isLiked = likedComments.has(comment.id);
+            
+            div.innerHTML = `
+                <div class="comment-header">
+                    <span>${comment.author}</span>
+                    <span>${comment.time}</span>
+                </div>
+                <div class="comment-content">${comment.content}</div>
+                <div class="comment-actions">
+                    <button class="like-btn ${isLiked ? 'active' : ''}" onclick="handleLike('${comment.id}')">
+                        <i class="fas fa-thumbs-up"></i> <span class="like-count">赞同 (${comment.likes})</span>
+                    </button>
+                    <button class="reply-btn" onclick="handleReply('${comment.id}')">
+                        <i class="fas fa-comment"></i> 回复
+                    </button>
+                </div>
+                <div class="reply-form" style="display: none;">
+                    <textarea placeholder="写下你的回复..."></textarea>
+                    <div class="reply-buttons">
+                        <button class="cancel-btn" onclick="cancelReply('${comment.id}')">取消</button>
+                        <button class="submit-btn" onclick="submitReply('${comment.id}')">提交回复</button>
+                    </div>
+                </div>
+                <div class="replies">
+                    ${comment.replies.map(reply => `
+                        <div class="reply" data-id="${reply.id}">
+                            <div class="reply-header">
+                                <span>${reply.author}</span>
+                                <span>${reply.time}</span>
+                            </div>
+                            <div class="reply-content">${reply.content}</div>
+                            <div class="reply-actions">
+                                <button class="like-btn ${likedComments.has(reply.id) ? 'active' : ''}" 
+                                        onclick="handleLike('${reply.id}')">
+                                    <i class="fas fa-thumbs-up"></i> 
+                                    <span class="like-count">赞同 (${reply.likes})</span>
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            return div;
+        }
+
+        // 处理点赞
+        function handleLike(id) {
+            const comment = comments.get(id);
+            if (!comment) return;
+            
+            const likeBtn = document.querySelector(`[data-id="${id}"] .like-btn`);
+            const likeCount = likeBtn.querySelector('.like-count');
+            
+            if (likedComments.has(id)) {
+                // 取消点赞
+                likedComments.delete(id);
+                likeBtn.classList.remove('active');
+                comment.likes--;
+            } else {
+                // 添加点赞
+                likedComments.add(id);
+                likeBtn.classList.add('active');
+                comment.likes++;
+            }
+            
+            likeCount.textContent = `赞同 (${comment.likes})`;
+            
+            // 保存状态
+            saveCommentsState();
+        }
+
+        // 处理回复
+        function handleReply(id) {
+            const comment = document.querySelector(`[data-id="${id}"]`);
+            if (!comment) return;
+            
+            const replyForm = comment.querySelector('.reply-form');
+            const replyBtn = comment.querySelector('.reply-btn');
+            
+            // 隐藏其他所有回复框
+            document.querySelectorAll('.reply-form').forEach(form => {
+                if (form !== replyForm) {
+                    form.style.display = 'none';
+                    form.closest('.comment').querySelector('.reply-btn').classList.remove('active');
+                }
+            });
+            
+            if (replyForm.style.display === 'none') {
+                replyForm.style.display = 'block';
+                replyBtn.classList.add('active');
+                replyForm.querySelector('textarea').focus();
+            } else {
+                replyForm.style.display = 'none';
+                replyBtn.classList.remove('active');
+            }
+        }
+
+        // 取消回复
+        function cancelReply(id) {
+            const comment = document.querySelector(`[data-id="${id}"]`);
+            if (!comment) return;
+            
+            const replyForm = comment.querySelector('.reply-form');
+            const replyBtn = comment.querySelector('.reply-btn');
+            
+            replyForm.style.display = 'none';
+            replyBtn.classList.remove('active');
+            replyForm.querySelector('textarea').value = '';
+        }
+
+        // 提交回复
+        function submitReply(id) {
+            const comment = document.querySelector(`[data-id="${id}"]`);
+            if (!comment) return;
+            
+            const replyForm = comment.querySelector('.reply-form');
+            const replyText = replyForm.querySelector('textarea').value.trim();
+            
+            if (replyText) {
+                const parentComment = comments.get(id);
+                if (!parentComment) return;
+                
+                const replyId = `reply-${Date.now()}`;
+                const newReply = {
+                    id: replyId,
+                    content: replyText,
+                    author: '新用户',
+                    time: new Date().toLocaleString(),
+                    likes: 0
+                };
+                
+                parentComment.replies.push(newReply);
+                
+                // 重新渲染评论
+                renderComments();
+                
+                // 保存状态
+                saveCommentsState();
+                
+                // 清空并隐藏回复框
+                replyForm.querySelector('textarea').value = '';
+                replyForm.style.display = 'none';
+                comment.querySelector('.reply-btn').classList.remove('active');
+            }
+        }
+
+        // 提交新评论
+        function submitComment() {
+            const commentText = document.getElementById('overview-new-comment').value.trim();
+            if (commentText) {
+                const newComment = {
+                    id: `comment-${commentId++}`,
+                    content: commentText,
+                    author: '新用户',
+                    time: new Date().toLocaleString(),
+                    likes: 0,
+                    replies: []
+                };
+                
+                comments.set(newComment.id, newComment);
+                
+                // 重新渲染评论
+                renderComments();
+                
+                // 保存状态
+                saveCommentsState();
+                
+                // 清空输入框
+                document.getElementById('overview-new-comment').value = '';
+            }
+        }
+
+        // 保存评论状态到localStorage
+        function saveCommentsState() {
+            localStorage.setItem('comments', JSON.stringify(Array.from(comments.values())));
+            localStorage.setItem('likedComments', JSON.stringify(Array.from(likedComments)));
+        }
+
+        // 页面加载时初始化评论系统
+        document.addEventListener('DOMContentLoaded', function() {
+            // 添加初始评论
+            if (comments.size === 0) {
+                const initialComments = [
+                    {
+                        id: 'comment-1',
+                        content: '这个事件反映出的问题不仅仅是耳环本身，而是更深层次的公职人员廉洁性问题。希望相关部门能够彻查，给公众一个交代。',
+                        author: '网友A',
+                        time: '2025-05-15 14:30',
+                        likes: 128,
+                        replies: []
+                    },
+                    {
+                        id: 'comment-2',
+                        content: '艺考成绩的争议也值得关注，这关系到教育公平。如果确实存在违规操作，应该严肃处理。',
+                        author: '网友B',
+                        time: '2025-05-15 15:45',
+                        likes: 95,
+                        replies: []
+                    }
+                ];
+                
+                initialComments.forEach(comment => {
+                    comments.set(comment.id, comment);
+                });
+                commentId = 3;
+            }
+            
+            initComments();
+        });
+
+        // 时间线功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const timelineBtn = document.getElementById('timelineBtn');
+            const timelinePanel = document.getElementById('timelinePanel');
+            const closeBtn = document.getElementById('closeBtn');
+
+            if (timelineBtn && timelinePanel && closeBtn) {
+                timelineBtn.addEventListener('click', function() {
+                    timelinePanel.classList.add('active');
+                });
+
+                closeBtn.addEventListener('click', function() {
+                    timelinePanel.classList.remove('active');
+                });
+
+                // 点击面板外部关闭面板
+                document.addEventListener('click', function(e) {
+                    if (timelinePanel.classList.contains('active') && 
+                        !timelinePanel.contains(e.target) && 
+                        !timelineBtn.contains(e.target)) {
+                        timelinePanel.classList.remove('active');
+                    }
+                });
+            }
+
+            // 内容折叠功能
+            document.querySelectorAll('.content-section h2').forEach(h2 => {
+                const section = h2.parentElement;
+                const content = Array.from(section.children).filter(el => el.tagName !== 'H2');
+                h2.addEventListener('click', () => {
+                    content.forEach(el => el.style.display = el.style.display === 'none' ? '' : 'none');
+                });
+            });
+        });
+    </script>
+</body>
+</html> 
